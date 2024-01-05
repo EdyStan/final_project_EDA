@@ -57,7 +57,7 @@ column_type <- class(imputed_Data$Severity)
 print(column_type)
 
 # first, we want to create training and test sets
-# install.packages("caret")
+#install.packages("caret")
 library(caret)
 
 # smth like random_state from Python
@@ -70,15 +70,16 @@ train_indices <- createDataPartition(imputed_Data$Severity, p = 0.8, list = FALS
 train_data <- imputed_Data[train_indices, ]
 test_data <- imputed_Data[-train_indices, ]
 
-# we import the randomForest library
-library(randomForest)
 
-random_forest_model <- randomForest(Severity ~ BI.RADS.assessment + Age + Shape + Malign + Density, 
+logistic_regression_model <- glm(Severity ~ BI.RADS.assessment + Age + Shape + Malign + Density, 
                                     data = train_data,
-                                    ntree = 200)
+                                    family = "binomial")
+
+levels(train_data$BI.RADS.assessment)  # Check levels in training data
+levels(test_data$BI.RADS.assessment)
 
 # Make predictions on the 'unseen' test set
-predictions <- predict(random_forest_model, newdata = test_data)
+predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdata = test_data, type = "response") > 0.5))
 
 # Evaluate the final model
 confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
@@ -94,10 +95,5 @@ print(paste("Accuracy:", accuracy))
 print(paste("Precision:", precision))
 print(paste("Recall:", recall))
 print(paste("F1 Score:", f1_score))
-
-
-
-
-
 
 

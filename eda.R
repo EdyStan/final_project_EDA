@@ -36,7 +36,8 @@ print(missing_values)
 # (Multiple imputations involve creating several versions of the data frame, 
 # each with different imputed values for the missing data. These datasets 
 # collectively reflect the uncertainty about the true values of the missing observations.)
-install.packages("mice")
+
+# install.packages("mice")
 library(mice)
 
 # impute data and create the updated data frame
@@ -47,3 +48,4 @@ imputed_Data <- complete(imputed_model)
 str(imputed_Data)
 
 # now, we might consider our data ready for predictions
+

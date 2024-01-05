@@ -19,6 +19,11 @@ Data$Malign <- as.factor(Data$Malign)
 Data$Density <- as.factor(Data$Density)
 Data$Severity <- as.factor(Data$Severity)
 
+# there is only one occurrence of value "55" in the whole BI.RADS.assessment feature
+# so we decide to remove it completely. After we do that, we drop the unused levels.
+Data <- Data[Data$BI.RADS.assessment != "55", ]
+Data$BI.RADS.assessment <- droplevels(Data$BI.RADS.assessment)
+
 # inspect the data frame once again to see the results
 str(Data)
 
