@@ -51,6 +51,15 @@ imputed_Data <- complete(imputed_model)
 # inspect the new data frame
 str(imputed_Data)
 
+# plot a histogram to illustrate the distribution of values for the label
+library(ggplot2)
+ggplot(imputed_Data, aes(x = imputed_Data$Severity)) +
+  geom_bar(width=0.7, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Severity", x = "Severity", y = "Frequency")
+
+
+
+
 # now, we might consider our data ready for predictions
 
 column_type <- class(imputed_Data$Severity) 
@@ -96,4 +105,12 @@ print(paste("Precision:", precision))
 print(paste("Recall:", recall))
 print(paste("F1 Score:", f1_score))
 
+
+# plot the ROC curve of our label and the predicted data. 
+# the input variables need to be numerical or ordered, so we decided to order them
+library(pROC)
+target <- factor(test_data$Severity, ordered=TRUE)
+pred <- factor(predictions, ordered=TRUE)
+roc_curve <- roc(target, pred)
+plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2, xlab="Precision", ylab="Recall")
 
