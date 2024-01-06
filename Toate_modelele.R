@@ -7,7 +7,7 @@ library(class)
 library(pROC)
 
 # load data into a data frame using read.csv function
-Data =  as.data.frame(read.csv("mammographic_masses.data"))
+Data =  as.data.frame(read.csv("data/mammographic_masses.data"))
 
 # preview the data frame. We observe that missing values are represented by "?"
 # and types are not ideal (chr for int values)
@@ -115,10 +115,10 @@ predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdata =
 confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
 
 # extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+logistic_accuracy <- confusion_matrix$overall["Accuracy"]
+logistic_precision <- confusion_matrix$byClass["Precision"]
+logistic_recall <- confusion_matrix$byClass["Recall"]
+logistic_f1_score <- confusion_matrix$byClass["F1"]
 
 # print the evaluation results
 print(paste("LR Accuracy:", accuracy))
@@ -148,10 +148,10 @@ predictions <- predict(random_forest_model, newdata = test_data)
 confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
 
 # extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+rf_accuracy <- confusion_matrix$overall["Accuracy"]
+rf_precision <- confusion_matrix$byClass["Precision"]
+rf_recall <- confusion_matrix$byClass["Recall"]
+rf_f1_score <- confusion_matrix$byClass["F1"]
 
 # print the evaluation results
 print(paste("RFC Accuracy:", accuracy))
@@ -185,3 +185,12 @@ print(paste("SVM Accuracy:", svm_accuracy))
 print(paste("SVM Precision:", svm_precision))
 print(paste("SVM Recall:", svm_recall))
 print(paste("SVM F1 Score:", svm_f1_score))
+
+
+# plot the final results
+accuracies <- c(knn_accuracy, logistic_accuracy, rf_accuracy, svm_accuracy)
+f1_scores <- c(knn_f1_score, logistic_f1_score, rf_f1_score, svm_f1_score)
+
+barplot(accuracies, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), width = c(0.24, 0.255, 0.24, 0.265), main = "Bar plot of acccuracies", xlab = "Models", ylab = "Accuracy", col = "lightblue", border = "black")
+
+barplot(f1_scores, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), width = c(0.24, 0.265, 0.24, 0.255), main = "Bar plot of F1 scores", xlab = "Models", ylab = "F1 score", col = "lightblue", border = "black")
