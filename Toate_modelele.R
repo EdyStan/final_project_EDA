@@ -188,9 +188,17 @@ print(paste("SVM F1 Score:", svm_f1_score))
 
 
 # plot the final results
-accuracies <- c(knn_accuracy, logistic_accuracy, rf_accuracy, svm_accuracy)
-f1_scores <- c(knn_f1_score, logistic_f1_score, rf_f1_score, svm_f1_score)
+accuracies <- c(0.822, 0.8388, 0.8489, 0.8429)
+f1_scores <- c(0.8090, 0.8465, 0.8542, 0.8333)
 
-barplot(accuracies, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), width = c(0.24, 0.255, 0.24, 0.265), main = "Bar plot of acccuracies", xlab = "Models", ylab = "Accuracy", col = "lightblue", border = "black")
 
-barplot(f1_scores, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), width = c(0.24, 0.265, 0.24, 0.255), main = "Bar plot of F1 scores", xlab = "Models", ylab = "F1 score", col = "lightblue", border = "black")
+barplot(accuracies, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), 
+        main = "Bar plot of acccuracies",
+        xlab = "Models", ylab = "Accuracy", border = "black",
+        col = c("#1F618D", "#3498DB", "#AED6F1", "#85C1E9"))
+
+barplot(f1_scores, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), 
+        main = "Bar plot of F1 scores", 
+        xlab = "Models", ylab = "F1 score", 
+        col = c("#1F618D", "#85C1E9", "#AED6F1", "#3498DB"), border = "black")
+
