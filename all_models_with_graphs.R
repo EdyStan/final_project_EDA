@@ -56,23 +56,28 @@ str(mice_imputed_Data)
 original_density <- as.integer(Data$Density)
 mice_density <- as.integer(mice_imputed_Data$Density)
 
-plot(density(original_density, na.rm=TRUE), main="Distribution of feature 'Density' - Mice imputation",
-     xlab="Data points", ylab="Density")
-lines(density(mice_density), col='red', lty=3, lwd=2)
+#plot(density(original_density, na.rm=TRUE), main="Distribution of feature 'Density' - Mice imputation",
+ #    xlab="Data points", ylab="Density", xaxt = "n", yaxt = "n")
+#lines(density(mice_density), col='red', lty=3, lwd=2)
+#legend("topleft", legend = c("Original", "Mice"), col = c('black','red'), lty = 1:2, cex=0.8)
+#axis(1, at = c(1,2,3,4,5))
 
-
-# plot a histogram to illustrate the distribution of values for the label
-ggplot(mice_imputed_Data, aes(x = mice_imputed_Data$Severity)) +
-  geom_bar(width=0.7, fill = "blue", color = "black", alpha = 0.7) +
-  labs(title = "Histogram of Severity", x = "Severity", y = "Frequency")
 
 missforest_imputed_data <- missForest(Data)
 missforest_density <- as.integer(missforest_imputed_data$ximp$Density)
 
 plot(density(original_density, na.rm=TRUE), 
-             main="Distribution of feature 'Density' - MissForest imputation",
-             xlab="Data points", ylab="Density")
-lines(density(missforest_density), col='red', lty=3, lwd=2)
+             main="Distribution of feature 'Density'",
+             xlab="Data points", ylab="Concentration", xaxt = "n", yaxt = "n", lwd=3)
+lines(density(missforest_density), col='red', lty=3, lwd=2.5)
+lines(density(mice_density), col='green', lty=3, lwd=2.5)
+legend("topleft", legend = c("Original", "Mice", "MissForest"), col = c('black','red', "green"), lty = 1:3, cex=0.8)
+axis(1, at = c(1,2,3,4,5))
+
+# plot a histogram to illustrate the distribution of values for the label
+ggplot(mice_imputed_Data, aes(x = mice_imputed_Data$Severity)) +
+  geom_bar(width=0.7, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Histogram of Severity", x = "Severity", y = "Frequency")
 
 #we check 'Severity' type 
 column_type <- class(mice_imputed_Data$Severity) 
@@ -81,7 +86,7 @@ print(column_type)
 
 datasets_to_use <- c(mice_imputed_Data, missforest_imputed_data$ximp)
 
-data_used = mice_imputed_Data
+data_used = missforest_imputed_data$ximp
 # data_used = missforest_imputed_data$ximp
 
 #now, we might consider our data ready
@@ -225,12 +230,6 @@ lr_predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdat
 
 lr_conf_matrix <- table(Predicted = lr_predictions, Actual = test_data$Severity)
 
-# extract statistics from the confusion matrix
-lr_accuracy <- confusion_matrix$overall["Accuracy"]
-lr_precision <- confusion_matrix$byClass["Precision"]
-lr_recall <- confusion_matrix$byClass["Recall"]
-lr_f1_score <- confusion_matrix$byClass["F1"]
-
 # Calculate accuracy
 lr_accuracy <- sum(diag(lr_conf_matrix)) / sum(lr_conf_matrix)
 
@@ -247,10 +246,10 @@ print(paste("LR F1 Score:", lr_f1_score))
 
 
 # Extract TP, FP, FN, TN values
-TP_lr <- conf_matrix[2, 2]
-FP_lr <- conf_matrix[1, 2]
-FN_lr <- conf_matrix[2, 1]
-TN_lr <- conf_matrix[1, 1]
+TP_lr <- lr_conf_matrix[2, 2]
+FP_lr <- lr_conf_matrix[1, 2]
+FN_lr <- lr_conf_matrix[2, 1]
+TN_lr <- lr_conf_matrix[1, 1]
 
 # Print the values
 cat("True Positives (TP):", TP_lr, "\n")
@@ -262,7 +261,7 @@ cat("True Negatives (TN):", TN_lr, "\n")
 # plot the ROC curve of our label and the predicted data. 
 # the input variables need to be numerical or ordered, so we decided to order them
 target <- factor(test_data$Severity, ordered=TRUE)
-pred <- factor(predictions, ordered=TRUE)
+pred <- factor(lr_predictions, ordered=TRUE)
 roc_curve <- roc(target, pred)
 plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2, xlab="Precision", ylab="Recall")
 
@@ -276,7 +275,7 @@ y_rf <- c()  # to store F1 scores
 x_rf <- c()  # to store the number of trees (ntree)
 
 # We define a range of ntree values for grid search
-ntree_values <- seq(100, 300, by = 50)
+ntree_values <- seq(100, 400, by = 50)
 
 for (ntree in ntree_values) {
   
@@ -320,32 +319,21 @@ ggplot(data.frame(x = x_rf, y = y_rf), aes(x, y)) +
 # Classical approach, with the best model found as best_ntree = 200
 random_forest_model <- randomForest(Severity ~ BI.RADS.assessment + Age + Shape + Margin + Density, 
                                     data = train_data,
-                                    ntree = 150)
+                                    ntree = best_ntree)
 
 # Make predictions on the 'unseen' test set
 rf_predictions <- predict(random_forest_model, newdata = test_data)
 
+
 # Extract the confusion matrix from the list
-conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$Severity)
-
-# extract statistics from the confusion matrix
-rfc_accuracy <- confusion_matrix$overall["Accuracy"]
-rfc_precision <- confusion_matrix$byClass["Precision"]
-rfc_recall <- confusion_matrix$byClass["Recall"]
-rfc_f1_score <- confusion_matrix$byClass["F1"]
-
-# print the evaluation results
-print(paste("RFC Accuracy:", rfc_accuracy))
-print(paste("RFC Precision:", rfc_precision))
-print(paste("RFC Recall:", rfc_recall))
-print(paste("RFC F1 Score:", rfc_f1_score))
+rf_conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$Severity)
 
 # Calculate accuracy
-rf_accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+rf_accuracy <- sum(diag(rf_conf_matrix)) / sum(rf_conf_matrix)
 
 # Calculate precision, recall, and F1 score
-rf_precision <- conf_matrix[2, 2] / sum(conf_matrix[, 2])
-rf_recall <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+rf_precision <- rf_conf_matrix[2, 2] / sum(rf_conf_matrix[, 2])
+rf_recall <- rf_conf_matrix[2, 2] / sum(rf_conf_matrix[2, ])
 rf_f1_score <- 2 * (rf_precision * rf_recall) / (rf_precision + rf_recall)
 
 # Print the evaluation results
@@ -355,10 +343,10 @@ print(paste("RFC Recall:", rf_recall))
 print(paste("RFC F1 Score:", rf_f1_score))
 
 # Extract TP, FP, FN, TN values
-TP_rf <- conf_matrix[2, 2]
-FP_rf <- conf_matrix[1, 2]
-FN_rf <- conf_matrix[2, 1]
-TN_rf <- conf_matrix[1, 1]
+TP_rf <- rf_conf_matrix[2, 2]
+FP_rf <- rf_conf_matrix[1, 2]
+FN_rf <- rf_conf_matrix[2, 1]
+TN_rf <- rf_conf_matrix[1, 1]
 
 # Print the results
 cat("True Positives (TP):", TP_rf, "\n")
@@ -443,8 +431,25 @@ print(paste("SVM Precision:", svm_precision))
 print(paste("SVM Recall:", svm_recall))
 print(paste("SVM F1 Score:", svm_f1_score))
 
-accuracies <- c(best_knn_accuracy, lr_accuracy, rfc_accuracy, svm_accuracy)
-f1_scores <- c(best_knn_f1_score, lr_f1_score, rfc_f1_score, svm_f1_score)
+# Create the confusion matrix
+svm_confusion_matrix <- table(Predicted = svm_predictions, Actual = test_data$Severity)
+
+# Extract TP, FP, FN, TN values
+TP <- svm_confusion_matrix[2, 2]
+FP <- svm_confusion_matrix[1, 2]
+FN <- svm_confusion_matrix[2, 1]
+TN <- svm_confusion_matrix[1, 1]
+
+# Print the values
+cat("True Positives (TP):", TP, "\n")
+cat("False Positives (FP):", FP, "\n")
+cat("False Negatives (FN):", FN, "\n")
+cat("True Negatives (TN):", TN, "\n")
+
+
+
+accuracies <- c(best_knn_accuracy, lr_accuracy, rf_accuracy, svm_accuracy)
+f1_scores <- c(best_knn_f1_score, lr_f1_score, rf_f1_score, svm_f1_score)
 
 print(accuracies)
 print(f1_scores)
@@ -463,7 +468,7 @@ print(f1_scores)
 # 0.8064516 0.8484848 0.8484848 0.8369565 
 
 barplot(accuracies, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), 
-        main = "Bar plot of acccuracies",
+        main = "Bar plot of accuracies",
         xlab = "Models", ylab = "Accuracy", border = "black",
         col = c("#1F618D", "#3498DB", "#AED6F1", "#85C1E9"))
 
@@ -472,20 +477,6 @@ barplot(f1_scores, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"),
         xlab = "Models", ylab = "F1 score", 
         col = c("#1F618D", "#85C1E9", "#AED6F1", "#3498DB"), border = "black")
 
-# Create the confusion matrix
-svm_confusion_matrix <- table(Predicted = svm_predictions, Actual = test_data$Severity)
-
-# Extract TP, FP, FN, TN values
-TP <- svm_confusion_matrix[2, 2]
-FP <- svm_confusion_matrix[1, 2]
-FN <- svm_confusion_matrix[2, 1]
-TN <- svm_confusion_matrix[1, 1]
-
-# Print the values
-cat("True Positives (TP):", TP, "\n")
-cat("False Positives (FP):", FP, "\n")
-cat("False Negatives (FN):", FN, "\n")
-cat("True Negatives (TN):", TN, "\n")
 
 
 
