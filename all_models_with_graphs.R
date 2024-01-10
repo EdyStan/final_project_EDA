@@ -46,26 +46,22 @@ missing_values <- colSums(is.na(Data))
 # we decide to impute them 
 print(missing_values)
 
-# impute data and create the updated data frame
+# impute data and create the updated data frame with mice and missforest
 mice_imputed_model <- mice(Data)
 mice_imputed_Data <- complete(mice_imputed_model)
+missforest_imputed_data <- missForest(Data)
 
 # inspect the new data frame
 str(mice_imputed_Data)
 
+# convert our chosen feature to integer in order to plot its distribution
 original_density <- as.integer(Data$Density)
 mice_density <- as.integer(mice_imputed_Data$Density)
-
-#plot(density(original_density, na.rm=TRUE), main="Distribution of feature 'Density' - Mice imputation",
- #    xlab="Data points", ylab="Density", xaxt = "n", yaxt = "n")
-#lines(density(mice_density), col='red', lty=3, lwd=2)
-#legend("topleft", legend = c("Original", "Mice"), col = c('black','red'), lty = 1:2, cex=0.8)
-#axis(1, at = c(1,2,3,4,5))
-
-
-missforest_imputed_data <- missForest(Data)
 missforest_density <- as.integer(missforest_imputed_data$ximp$Density)
 
+# plot the distribution. We notice that the distribution remains the same for 
+# mice imputation, but it changes slightly for missforest. It looks like
+# missforest makes the dataset more balanced increasing the points that take value 2.
 plot(density(original_density, na.rm=TRUE), 
              main="Distribution of feature 'Density'",
              xlab="Data points", ylab="Concentration", xaxt = "n", yaxt = "n", lwd=3)
@@ -74,20 +70,20 @@ lines(density(mice_density), col='green', lty=3, lwd=2.5)
 legend("topleft", legend = c("Original", "Mice", "MissForest"), col = c('black','red', "green"), lty = 1:3, cex=0.8)
 axis(1, at = c(1,2,3,4,5))
 
-# plot a histogram to illustrate the distribution of values for the label
+# plot a histogram to illustrate the distribution of values for the label after imputation
 ggplot(mice_imputed_Data, aes(x = mice_imputed_Data$Severity)) +
   geom_bar(width=0.7, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Histogram of Severity", x = "Severity", y = "Frequency")
 
-#we check 'Severity' type 
+# we check 'Severity' type 
 column_type <- class(mice_imputed_Data$Severity) 
 print(column_type)
 
-
+# To change the data set that is going to be used, just modify the value of
+# variable `data_used` with the desired one. The only options are present
+# in `datasets_to_use`.
 datasets_to_use <- c(mice_imputed_Data, missforest_imputed_data$ximp)
-
 data_used = missforest_imputed_data$ximp
-# data_used = missforest_imputed_data$ximp
 
 #now, we might consider our data ready
 #################################################################
