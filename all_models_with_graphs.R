@@ -81,22 +81,22 @@ x_knn <- c()  # to store k values
 y_knn <- c()  # to store F1 scores (the chosen metric)
 
 # Define a range of k values for grid search
-k_values <- seq(1, 30, by = 5)  # Adjust the range based on your preference
+k_values <- seq(1, 30, by = 5)  
 
 # Loop through each k value from k_values
 for (k in k_values) {
   
   print(paste('for k = ', k))
-  # Fit various configurations of the KNN model
+  # check various configurations of the KNN model
   knn_model <- knn(train = train_data[, c("BI.RADS.assessment", "Age", "Shape", "Margin", "Density")],
                    test = test_data[, c("BI.RADS.assessment", "Age", "Shape", "Margin", "Density")],
                    cl = train_data$Severity,
                    k = k)
   
-  # Evaluate the KNN model
+  # we evaluate the KNN model
   knn_confusion_matrix <- table(Predicted = knn_model, Actual = test_data$Severity)
   
-  # Calculate F1 Score
+  # then we calculate F1 Score
   knn_accuracy <- sum(diag(knn_confusion_matrix)) / sum(knn_confusion_matrix)
   knn_precision <- knn_confusion_matrix["1", "1"] / sum(knn_confusion_matrix["1", ])
   knn_recall <- knn_confusion_matrix["1", "1"] / sum(knn_confusion_matrix[, "1"])
@@ -107,7 +107,7 @@ for (k in k_values) {
   print(paste("KNN Recall:", knn_recall))
   print(paste("KNN F1 Score:", knn_f1_score)) 
   
-  # Store results
+  # we store results
   x_knn <- c(x_knn, k)
   y_knn <- c(y_knn, knn_f1_score)
 }
@@ -125,7 +125,7 @@ plot(x_knn, y_knn, type = "p", col = "red", pch = 16,
      xlab = "Number of neighbors (k)", ylab = "F1 Score", 
      main = "k tuning")
 
-# Connect scatter points with a line for bettwer visualization
+# Connect scatter points with a line for better visualization
 lines(x_knn, y_knn, col = "black", type = "l")
 
 # Just for clarity, we will work with the best KNN model separately,
@@ -152,6 +152,17 @@ print(paste("Best KNN Accuracy:", knn_accuracy))
 print(paste("Best KNN Precision:", knn_precision))
 print(paste("Best KNN Recall:", knn_recall))
 print(paste("Best KNN F1 Score:", knn_f1_score)) 
+
+TP_knn <- best_knn_confusion_matrix[2, 2]
+FP_knn <- best_knn_confusion_matrix[1, 2]
+FN_knn <- best_knn_confusion_matrix[2, 1]
+TN_knn <- best_knn_confusion_matrix[1, 1]
+
+# Print the values
+cat("True Positives (TP):", TP_knn, "\n")
+cat("False Positives (FP):", FP_knn, "\n")
+cat("False Negatives (FN):", FN_knn, "\n")
+cat("True Negatives (TN):", TN_knn, "\n")
 
 ################################################################
 
@@ -185,22 +196,35 @@ levels(train_data$BI.RADS.assessment)  # Check levels in training data
 levels(test_data$BI.RADS.assessment)
 
 # Make predictions on the 'unseen' test set
-predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdata = test_data, type = "response") > 0.5))
+lr_predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdata = test_data, type = "response") > 0.5))
 
-# Evaluate the final model
-confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
+lr_conf_matrix <- table(Predicted = lr_predictions, Actual = test_data$Severity)
 
-# extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+# Calculate accuracy
+lr_accuracy <- sum(diag(lr_conf_matrix)) / sum(lr_conf_matrix)
 
-# print the evaluation results
-print(paste("LR Accuracy:", accuracy))
-print(paste("LR Precision:", precision))
-print(paste("LR Recall:", recall))
-print(paste("LR F1 Score:", f1_score))
+# Calculate precision, recall, and F1 score
+lr_precision <- lr_conf_matrix[2, 2] / sum(lr_conf_matrix[, 2])
+lr_recall <- lr_conf_matrix[2, 2] / sum(lr_conf_matrix[2, ])
+lr_f1_score <- 2 * (lr_precision * lr_recall) / (lr_precision + lr_recall)
+
+# Print the evaluation results
+print(paste("LR Accuracy:", lr_accuracy))
+print(paste("LR Precision:", lr_precision))
+print(paste("LR Recall:", lr_recall))
+print(paste("LR F1 Score:", lr_f1_score))
+
+# Extract TP, FP, FN, TN values
+TP_lr <- conf_matrix[2, 2]
+FP_lr <- conf_matrix[1, 2]
+FN_lr <- conf_matrix[2, 1]
+TN_lr <- conf_matrix[1, 1]
+
+# Print the values
+cat("True Positives (TP):", TP_lr, "\n")
+cat("False Positives (FP):", FP_lr, "\n")
+cat("False Negatives (FN):", FN_lr, "\n")
+cat("True Negatives (TN):", TN_lr, "\n")
 
 
 # plot the ROC curve of our label and the predicted data. 
@@ -249,10 +273,10 @@ for (ntree in ntree_values) {
   y_rf <- c(y_rf, rf_f1_score)
 }
 
-# Find the ntree value with the maximum F1 score
+# we find the ntree value with the maximum F1 score
 best_ntree <- x_rf[which.max(y_rf)]
 
-# Print the best ntree
+# then we print the best ntree
 print(paste("The best number of trees for a Random Forest Classifier is: ", best_ntree))
 
 ggplot(data.frame(x = x_rf, y = y_rf), aes(x, y)) +
@@ -264,26 +288,39 @@ ggplot(data.frame(x = x_rf, y = y_rf), aes(x, y)) +
 # Classical approach, with the best model found as best_ntree = 200
 random_forest_model <- randomForest(Severity ~ BI.RADS.assessment + Age + Shape + Margin + Density, 
                                     data = train_data,
-                                    ntree = best_ntree)
+                                    ntree = 250)
 
 # Make predictions on the 'unseen' test set
-predictions <- predict(random_forest_model, newdata = test_data)
+rf_predictions <- predict(random_forest_model, newdata = test_data)
 
-# Evaluate the final model
-confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
+# Extract the confusion matrix from the list
+conf_matrix <- table(Predicted = rf_predictions, Actual = test_data$Severity)
 
-# extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+# Calculate accuracy
+rf_accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
 
-# print the evaluation results
-print(paste("RFC Accuracy:", accuracy))
-print(paste("RFC Precision:", precision))
-print(paste("RFC Recall:", recall))
-print(paste("RFC F1 Score:", f1_score))
+# Calculate precision, recall, and F1 score
+rf_precision <- conf_matrix[2, 2] / sum(conf_matrix[, 2])
+rf_recall <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+rf_f1_score <- 2 * (rf_precision * rf_recall) / (rf_precision + rf_recall)
 
+# Print the evaluation results
+print(paste("RFC Accuracy:", rf_accuracy))
+print(paste("RFC Precision:", rf_precision))
+print(paste("RFC Recall:", rf_recall))
+print(paste("RFC F1 Score:", rf_f1_score))
+
+# Extract TP, FP, FN, TN values
+TP_rf <- conf_matrix[2, 2]
+FP_rf <- conf_matrix[1, 2]
+FN_rf <- conf_matrix[2, 1]
+TN_rf <- conf_matrix[1, 1]
+
+# Print the results
+cat("True Positives (TP):", TP_rf, "\n")
+cat("False Positives (FP):", FP_rf, "\n")
+cat("False Negatives (FN):", FN_rf, "\n")
+cat("True Negatives (TN):", TN_rf, "\n")
 
 ################################################################
 
@@ -340,8 +377,8 @@ ggplot(data.frame(x = x_svm, y = y_svm), aes(x, y)) +
 # also the straightforward approach is displayed below:
 svm_model <- svm(Severity ~ BI.RADS.assessment + Age + Shape + Margin + Density, 
                  data = train_data,
-                 kernel = "radial", # "radial", "polynomial"
-                 cost = 10)          # cost parameter
+                 kernel = "radial", 
+                 cost = 10)   
 
 # prediction on test
 svm_predictions <- predict(svm_model, newdata = test_data)
@@ -360,3 +397,21 @@ print(paste("SVM Accuracy:", svm_accuracy))
 print(paste("SVM Precision:", svm_precision))
 print(paste("SVM Recall:", svm_recall))
 print(paste("SVM F1 Score:", svm_f1_score))
+
+# Create the confusion matrix
+svm_confusion_matrix <- table(Predicted = svm_predictions, Actual = test_data$Severity)
+
+# Extract TP, FP, FN, TN values
+TP <- svm_confusion_matrix[2, 2]
+FP <- svm_confusion_matrix[1, 2]
+FN <- svm_confusion_matrix[2, 1]
+TN <- svm_confusion_matrix[1, 1]
+
+# Print the values
+cat("True Positives (TP):", TP, "\n")
+cat("False Positives (FP):", FP, "\n")
+cat("False Negatives (FN):", FN, "\n")
+cat("True Negatives (TN):", TN, "\n")
+
+
+
