@@ -6,6 +6,8 @@ library(e1071)
 library(class)
 library(pROC)
 library(glmnet)
+library(missForest)
+
 
 # load data into a data frame using read.csv function
 Data =  as.data.frame(read.csv("mammographic_masses_margin.data"))
@@ -45,20 +47,42 @@ missing_values <- colSums(is.na(Data))
 print(missing_values)
 
 # impute data and create the updated data frame
-imputed_model <- mice(Data)
-imputed_Data <- complete(imputed_model)
+mice_imputed_model <- mice(Data)
+mice_imputed_Data <- complete(mice_imputed_model)
 
 # inspect the new data frame
-str(imputed_Data)
+str(mice_imputed_Data)
+
+original_density <- as.integer(Data$Density)
+mice_density <- as.integer(mice_imputed_Data$Density)
+
+plot(density(original_density, na.rm=TRUE), main="Distribution of feature 'Density' - Mice imputation",
+     xlab="Data points", ylab="Density")
+lines(density(mice_density), col='red', lty=3, lwd=2)
+
 
 # plot a histogram to illustrate the distribution of values for the label
-ggplot(imputed_Data, aes(x = imputed_Data$Severity)) +
+ggplot(mice_imputed_Data, aes(x = mice_imputed_Data$Severity)) +
   geom_bar(width=0.7, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Histogram of Severity", x = "Severity", y = "Frequency")
 
+missforest_imputed_data <- missForest(Data)
+missforest_density <- as.integer(missforest_imputed_data$ximp$Density)
+
+plot(density(original_density, na.rm=TRUE), 
+             main="Distribution of feature 'Density' - MissForest imputation",
+             xlab="Data points", ylab="Density")
+lines(density(missforest_density), col='red', lty=3, lwd=2)
+
 #we check 'Severity' type 
-column_type <- class(imputed_Data$Severity) 
+column_type <- class(mice_imputed_Data$Severity) 
 print(column_type)
+
+
+datasets_to_use <- c(mice_imputed_Data, missforest_imputed_data$ximp)
+
+data_used = mice_imputed_Data
+# data_used = missforest_imputed_data$ximp
 
 #now, we might consider our data ready
 #################################################################
@@ -66,10 +90,11 @@ print(column_type)
 # Create training and test sets
 # p is the proportion of data that is included in the training set
 # set.seed is smth like random_state from Python
+
 set.seed(1)
-train_indices <- createDataPartition(imputed_Data$Severity, p = 0.8, list = FALSE)
-train_data <- imputed_Data[train_indices, ]
-test_data <- imputed_Data[-train_indices, ]
+train_indices <- createDataPartition(data_used$Severity, p = 0.8, list = FALSE)
+train_data <- data_used[train_indices, ]
+test_data <- data_used[-train_indices, ]
 
 #now we can start using our models for predictions
 ################################################################
@@ -133,7 +158,7 @@ lines(x_knn, y_knn, col = "black", type = "l")
 best_knn_model <- knn(train = train_data[, c("BI.RADS.assessment", "Age", "Shape", "Margin", "Density")],
                  test = test_data[, c("BI.RADS.assessment", "Age", "Shape", "Margin", "Density")],
                  cl = train_data$Severity,
-                 k = 11) 
+                 k = best_k) 
 
 # Evaluate the KNN model
 best_knn_confusion_matrix <- table(Predicted = best_knn_model, Actual = test_data$Severity)
@@ -191,16 +216,16 @@ predictions <- as.factor(as.numeric(predict(logistic_regression_model, newdata =
 confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
 
 # extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+lr_accuracy <- confusion_matrix$overall["Accuracy"]
+lr_precision <- confusion_matrix$byClass["Precision"]
+lr_recall <- confusion_matrix$byClass["Recall"]
+lr_f1_score <- confusion_matrix$byClass["F1"]
 
 # print the evaluation results
-print(paste("LR Accuracy:", accuracy))
-print(paste("LR Precision:", precision))
-print(paste("LR Recall:", recall))
-print(paste("LR F1 Score:", f1_score))
+print(paste("LR Accuracy:", lr_accuracy))
+print(paste("LR Precision:", lr_precision))
+print(paste("LR Recall:", lr_recall))
+print(paste("LR F1 Score:", lr_f1_score))
 
 
 # plot the ROC curve of our label and the predicted data. 
@@ -273,16 +298,16 @@ predictions <- predict(random_forest_model, newdata = test_data)
 confusion_matrix <- confusionMatrix(predictions, test_data$Severity)
 
 # extract statistics from the confusion matrix
-accuracy <- confusion_matrix$overall["Accuracy"]
-precision <- confusion_matrix$byClass["Precision"]
-recall <- confusion_matrix$byClass["Recall"]
-f1_score <- confusion_matrix$byClass["F1"]
+rfc_accuracy <- confusion_matrix$overall["Accuracy"]
+rfc_precision <- confusion_matrix$byClass["Precision"]
+rfc_recall <- confusion_matrix$byClass["Recall"]
+rfc_f1_score <- confusion_matrix$byClass["F1"]
 
 # print the evaluation results
-print(paste("RFC Accuracy:", accuracy))
-print(paste("RFC Precision:", precision))
-print(paste("RFC Recall:", recall))
-print(paste("RFC F1 Score:", f1_score))
+print(paste("RFC Accuracy:", rfc_accuracy))
+print(paste("RFC Precision:", rfc_precision))
+print(paste("RFC Recall:", rfc_recall))
+print(paste("RFC F1 Score:", rfc_f1_score))
 
 
 ################################################################
@@ -341,7 +366,7 @@ ggplot(data.frame(x = x_svm, y = y_svm), aes(x, y)) +
 svm_model <- svm(Severity ~ BI.RADS.assessment + Age + Shape + Margin + Density, 
                  data = train_data,
                  kernel = "radial", # "radial", "polynomial"
-                 cost = 10)          # cost parameter
+                 cost = 1)          # cost parameter
 
 # prediction on test
 svm_predictions <- predict(svm_model, newdata = test_data)
@@ -360,3 +385,35 @@ print(paste("SVM Accuracy:", svm_accuracy))
 print(paste("SVM Precision:", svm_precision))
 print(paste("SVM Recall:", svm_recall))
 print(paste("SVM F1 Score:", svm_f1_score))
+
+
+accuracies <- c(best_knn_accuracy, lr_accuracy, rfc_accuracy, svm_accuracy)
+f1_scores <- c(best_knn_f1_score, lr_f1_score, rfc_f1_score, svm_f1_score)
+
+print(accuracies)
+print(f1_scores)
+
+# Mice imputed
+# Accuracy       
+# 0.8062827 0.8272251 0.8429319 0.8376963 
+# F1        
+# 0.7909605 0.8421053 0.8529412 0.8248588
+
+
+# MissForest imputed
+# Accuracy        
+# 0.8115183 0.8429319 0.8429319 0.8429319 
+# F1           
+# 0.8064516 0.8484848 0.8484848 0.8369565 
+
+barplot(accuracies, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), 
+        main = "Bar plot of acccuracies",
+        xlab = "Models", ylab = "Accuracy", border = "black",
+        col = c("#1F618D", "#3498DB", "#AED6F1", "#85C1E9"))
+
+barplot(f1_scores, names.arg = c("KNN", "Logistic Reg", "RFC", "SVM"), 
+        main = "Bar plot of F1 scores", 
+        xlab = "Models", ylab = "F1 score", 
+        col = c("#1F618D", "#85C1E9", "#AED6F1", "#3498DB"), border = "black")
+
+
