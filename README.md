@@ -14,11 +14,11 @@ The models used to classify the data are:
 - Random Forest Classifier.
 - Support Vector Machine (SVM).
 
-More details are presented in `Documentation.pdf`.
-
 Contributors:
 
 - Eduard Stan (https://github.com/EdyStan).
 - Oana Sîrbu (https://github.com/Oana4).
 - Sebi Barbu (https://github.com/sebibarbu).
 - Geo Plăian (https://github.com/geoplaian).
+
+More details are presented in `Documentation.pdf`, and the code is written in `models.R`.
