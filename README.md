@@ -9,16 +9,16 @@ Several preprocessing techniques were used:
 
 The models used to classify the data are:
 
-- K-Nearest Neighbours (KNN).
+- K-Nearest Neighbors (KNN).
 - Logistic Regression.
 - Random Forest Classifier.
 - Support Vector Machine (SVM).
 
 Contributors:
 
-- Eduard Stan (https://github.com/EdyStan).
-- Oana Sîrbu (https://github.com/Oana4).
-- Sebi Barbu (https://github.com/sebibarbu).
-- Geo Plăian (https://github.com/geoplaian).
+- [Eduard Stan](https://github.com/EdyStan).
+- [Oana Sîrbu](https://github.com/Oana4).
+- [Sebi Barbu](https://github.com/sebibarbu).
+- [Geo Plăian](https://github.com/geoplaian).
 
 More details are presented in `Documentation.pdf`, and the code is written in `models.R`.
